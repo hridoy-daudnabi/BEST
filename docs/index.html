@@ -65,7 +65,7 @@
 <div class="wrap">
   <section class="card">
     <h2>Policy levers</h2>
-    <p class="sub">Percentage change applied to each mode's base value (0 = no change)</p>
+    <p class="sub">Percentage change from each mode's base value.</p>
     <div id="controls"></div>
     <button class="btn" id="reset">Reset all</button>
   </section>
@@ -125,17 +125,30 @@ function shares(mult){
 const base = shares({time:Array(J).fill(0),cost:Array(J).fill(0),park:Array(J).fill(0)});
 
 // ---- build controls ----
+// Groups are explicit so Bike and Walk show a "Distance" lever instead of a
+// travel-time one. For those modes travel time is a direct function of distance,
+// so the distance sliders drive the same internal "time" attribute.
+const isActive = j => M[j]==="Bike" || M[j]==="Walk";
+const idx = pred => M.map((m,j)=>j).filter(pred);
+const GROUPS = [
+  {title:"Travel time", attr:"time", modes: idx(j=>!isActive(j))},
+  {title:"Travel cost", attr:"cost", modes: idx(j=>D.hasCost[j])},
+  {title:"Monthly parking", attr:"park", modes: idx(j=>D.hasPark[j])},
+  {title:"Distance", attr:"time", modes: idx(j=>isActive(j))},
+];
+
 function buildControls(){
   const host = document.getElementById("controls");
   host.innerHTML="";
-  for(const a of ATTRS){
+  for(const grp of GROUPS){
+    if(!grp.modes.length) continue;
     const g=document.createElement("div"); g.className="group";
-    const h=document.createElement("h3"); h.textContent=ATTR_LABEL[a]+" (% change)"; g.appendChild(h);
-    M.forEach((m,j)=>{
-      if(!applies[a][j]) return;
+    const h=document.createElement("h3"); h.textContent=grp.title+" (% change)"; g.appendChild(h);
+    grp.modes.forEach(j=>{
+      const a=grp.attr;
       const row=document.createElement("div"); row.className="row";
       const lo = a==="park" ? -100 : -50, hi = 100;
-      row.innerHTML=`<label>${LAB[m]}</label>
+      row.innerHTML=`<label>${LAB[M[j]]}</label>
         <input type="range" min="${lo}" max="${hi}" step="5" value="0" data-a="${a}" data-j="${j}">
         <span class="val" id="val-${a}-${j}">0</span>`;
       g.appendChild(row);
